@@ -160,8 +160,8 @@ namespace Musuko {
     //----------------------------------------------------------------------
     // GPS
     //----------------------------------------------------------------------
-    let gls_lat = 0.0;
-    let gls_lng = 0.0;
+    let gps_lat_val = 0.0;
+    let gps_lng_val = 0.0;
 
     /**
      * Call gps_setup on start
@@ -193,8 +193,8 @@ namespace Musuko {
             const myArray = msg.split(",");
 
             if (myArray[0] === "$GNGGA") {
-                gls_lat = parseFloat(myArray[2]) / 100.0;
-                gls_lng = parseFloat(myArray[4]) / 100.0;
+                gps_lat_val = nmeaToDegrees(myArray[2]);
+                gps_lng_val = nmeaToDegrees(myArray[4]);
             }
         }
     }
@@ -207,7 +207,7 @@ namespace Musuko {
     //% blockGap=8
     //% block="Read GPS latitude"
     export function gps_lat(): number {
-        return gls_lat;
+        return gps_lat_val;
     }
 
     /**
@@ -218,7 +218,18 @@ namespace Musuko {
     //% blockGap=40
     //% block="Read GPS longitude"
     export function gps_lng(): number {
-        return gls_lng;
+        return gps_lng_val;
+    }
+
+    function nmeaToDegrees(nmeaValue: String) {
+        // Extract degrees and minutes from the NMEA value
+        const degrees = parseInt(nmeaValue.slice(0, nmeaValue.indexOf('.') - 2), 10);
+        const minutes = parseFloat(nmeaValue.slice(nmeaValue.indexOf('.') - 2));
+
+        // Calculate the decimal degrees
+        const decimalDegrees = degrees + (minutes / 60);
+
+        return decimalDegrees;
     }
 
     //----------------------------------------------------------------------
@@ -1013,11 +1024,93 @@ namespace Musuko {
      */
     //% group="IMU Motion sensor"
     //% weight=46
-    //% blockGap=8
+    //% blockGap=40
     //% block="Temperature (Unit: Celsius)"
     export function Read_temperature(): number {
         let rawTemp = MPU6050_ReadWordRegister(MPU6050_TEMP_ADDR);
         return 36.53 + (rawTemp / 340);
+    }
+
+    /**
+     * Tools
+     */
+    //% group="Tools"
+    //% weight=30
+    //% blockGap=8
+    //% block="Get angle difference %angle1 %angle2"
+    export function angleDifferenceLeftRight(angle1: number, angle2: number) 
+    {
+        // Ensure angles are within the range of 0 to 360 degrees
+        angle1 = angle1 % 360;
+        angle2 = angle2 % 360;
+
+        // Calculate the difference
+        let diff = angle2 - angle1;
+
+        // Ensure the difference is within the range of -180 to 180 degrees
+        if (diff > 180) {
+            diff -= 360;
+        } else if (diff < -180) {
+            diff += 360;
+        }
+
+        return diff;
+    }
+
+    function degreesToRadians(degrees:number) {
+        return degrees * (Math.PI / 180);
+    }
+
+    /**
+     * Tools
+     */
+    //% group="Tools"
+    //% weight=29
+    //% blockGap=8
+    //% block="Heading to %lat %lon"
+    export function angleBetweenCoordinates(lat: number, lon: number) {
+        const lat1 = degreesToRadians(gps_lat_val)
+        const lon1 = degreesToRadians(gps_lng_val)
+        const lat2 = degreesToRadians(lat)
+        const lon2 = degreesToRadians(lon)
+        
+        const dLon = lon2 - lon1;
+        const y = Math.sin(dLon) * Math.cos(lat2);
+        const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+        let angle = Math.atan2(y, x) * (180 / Math.PI);
+        angle = (angle + 360) % 360; // Ensure the angle is within the range of 0 to 360 degrees
+        return angle;
+    }
+
+    /**
+         * Tools
+         */
+    //% group="Tools"
+    //% weight=28
+    //% blockGap=8
+    //% block="Distance to %lat %lon"
+    export function distanceTo(lat: number, lon: number) {
+        const lat1 = (gps_lat_val)
+        const lon1 = (gps_lng_val)
+        const lat2 = (lat)
+        const lon2 = (lon)
+
+        const earthRadius = 6371e3; // Earth's radius in meters
+
+        // Convert latitude and longitude from degrees to radians
+        const phi1 = degreesToRadians(lat1);
+        const phi2 = degreesToRadians(lat2);
+        const deltaPhi = degreesToRadians(lat2 - lat1);
+        const deltaLambda = degreesToRadians(lon2 - lon1);
+
+        // Haversine formula to calculate the distance
+        const a = Math.sin(deltaPhi / 2) * Math.sin(deltaPhi / 2) +
+            Math.cos(phi1) * Math.cos(phi2) *
+            Math.sin(deltaLambda / 2) * Math.sin(deltaLambda / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = earthRadius * c;
+
+        return distance;
     }
 }
 
