@@ -1,9 +1,9 @@
 function Goto (lat: number, lon: number, error: number) {
     if (Musuko.distanceTo(lat, lon) > error) {
         if (Musuko.angleDifferenceLeftRight(input.compassHeading(), Musuko.angleBetweenCoordinates(lat, lon)) > 10) {
-            Musuko.wheel_run(Motor_Ch.M3, Wheel_Dir.Front, 70)
+            Musuko.wheel_run(Motor_Ch.M3, Wheel_Dir.Front, 80)
         } else if (Musuko.angleDifferenceLeftRight(input.compassHeading(), Musuko.angleBetweenCoordinates(lat, lon)) < -10) {
-            Musuko.wheel_run(Motor_Ch.M3, Wheel_Dir.Back, 70)
+            Musuko.wheel_run(Motor_Ch.M3, Wheel_Dir.Back, 80)
         } else {
             Musuko.wheel_run(Motor_Ch.M3, Wheel_Dir.Front, 0)
         }
@@ -57,9 +57,11 @@ basic.forever(function () {
             is_start = 6
             basic.showIcon(IconNames.House)
         }
-    } else {
+    } else if (is_start == 6) {
         Musuko.stop_all_wheel()
         is_start = 0
         basic.showIcon(IconNames.Yes)
+    } else {
+    	
     }
 })
